@@ -21,18 +21,22 @@ websites = [
 red = APIRouter()
 
 def OpenWebSite():
-    driver = webdriver.Chrome(executable_path='/chromedriver.exe')
+    driver = webdriver.Chrome()
+    wait = WebDriverWait(driver, 200)
     driver.get(websites[0])
-    search_box = driver.find_element_by_id("input-search")
+    Cookies = wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "cc-btn")))
+    Cookies.click()
+    search_box = wait.until(EC.visibility_of_element_located((By.ID, "input-search")))
+    search_box.click()
     search_box.send_keys("PNL")
     search_box.send_keys(Keys.RETURN)
-    wait = WebDriverWait(driver, 10)
-    element = wait.until(EC.presence_of_element_located((By.ID, "btn-general-buscar")))
-    element.click()
-    element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "element-ing-data-record")))
-    element.click()
-    element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "cont-completo")))
-    element.click()
+    docs = wait.until(EC.visibility_of_element_located((By.ID, "wrapper-register")))
+    array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.flex-wrap.details-rels-justify .doc-element-grid.card-rel.data-record-ind .do-grid-play.grid-main-img.select-record')))
+    [(By.TAG_NAME, 'pre'), (By.TAG_NAME, 'body')]
+    for doc in array_docs:
+        wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.element-ing-data-record.img-portada'))).click()
+        break
+
     # Cambiar a la nueva ventana
     new_window = driver.window_handles[-1]
     driver.switch_to.window(new_window)
@@ -48,6 +52,6 @@ def OpenWebSite():
     return FileResponse("documento.pdf")
 
 
-@red.post('/test', response_model= list[str], tags=["Cod"])
+@red.post('/test', response_model= list[str], tags=["Web Scrapping"])
 def postText():
     OpenWebSite()
