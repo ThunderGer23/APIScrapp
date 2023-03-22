@@ -15,12 +15,14 @@ import requests
 from bs4 import BeautifulSoup
 
 websites = [
-    'https://repositorio.unam.mx/contenidos?f=883.%23.%23.a_lit:Repositorio%20de%20la%20Direcci%C3%B3n%20General%20de%20Bibliotecas%20y%20Servicios%20Digitales%20de%20Informaci%C3%B3n'
+    'https://repositorio.unam.mx/contenidos?f=883.%23.%23.a_lit:Repositorio%20de%20la%20Direcci%C3%B3n%20General%20de%20Bibliotecas%20y%20Servicios%20Digitales%20de%20Informaci%C3%B3n',
+    'https://tesis.ipn.mx/handle/123456789/17534',
+    'https://repositorio.tec.mx/discover',
+    'http://zaloamati.azc.uam.mx/handle/11191/6701/discover'
 ]
-
 red = APIRouter()
 
-def OpenWebSite():
+def SearchUNAM(search):
     driver = webdriver.Chrome()
     wait = WebDriverWait(driver, 200)
     driver.get(websites[0])
@@ -28,30 +30,58 @@ def OpenWebSite():
     Cookies.click()
     search_box = wait.until(EC.visibility_of_element_located((By.ID, "input-search")))
     search_box.click()
-    search_box.send_keys("PNL")
+    search_box.send_keys(search)
     search_box.send_keys(Keys.RETURN)
-    docs = wait.until(EC.visibility_of_element_located((By.ID, "wrapper-register")))
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.flex-wrap.details-rels-justify .doc-element-grid.card-rel.data-record-ind .do-grid-play.grid-main-img.select-record')))
     [(By.TAG_NAME, 'pre'), (By.TAG_NAME, 'body')]
+    lista = 0
     for doc in array_docs:
-        wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.element-ing-data-record.img-portada'))).click()
-        break
-
-    # Cambiar a la nueva ventana
-    new_window = driver.window_handles[-1]
-    driver.switch_to.window(new_window)
-    # Obtener la URL de la nueva ventana
-    pdf_url = driver.current_url
-    # Descargar el archivo PDF y guardar en un archivo local
-    response = requests.get(pdf_url)
-    with open("documento.pdf", "wb") as f:
-        f.write(response.content)
-    time.sleep(5)  # Espera 5 segundos para que la página cargue completamente
-    html = driver.page_source
+        lista += 1
+        doc.click()
+        wait.until(EC.visibility_of_element_located((By.ID, 'cont-completo'))).click()
+        # Cambiar a la nueva ventana
+        new_window = driver.window_handles[-1]
+        driver.switch_to.window(new_window)
+        # Obtener la URL de la nueva ventana
+        wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
+        pdf_url = driver.current_url
+        # Descargar el archivo PDF y guardar en un archivo local
+        response = requests.get(pdf_url)
+        with open(f"documents/UNAMdocumento{search}{lista}.pdf", "wb") as f:
+            f.write(response.content)
+        driver.close()
+        wait.until(EC.number_of_windows_to_be(1))
+        driver.switch_to.window(driver.window_handles[0])
+        wait.until(EC.visibility_of_element_located((By.ID, 'container_record_modal'))).send_keys(Keys.ESCAPE)
+        if(lista == 5): break
     driver.quit()
-    return FileResponse("documento.pdf")
 
+def SearchIPN(search):
+    driver = webdriver.Chrome()
+    wait = WebDriverWait(driver, 200)
+    driver.get(websites[1])
+    search_box = wait.until(EC.visibility_of_element_located((By.ID, "aspect_discovery_CommunitySearch_field_query")))
+    search_box.click()
+    search_box.send_keys(search)
+    search_box.send_keys(Keys.RETURN)
+    array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.ds-static-div.primary .ds-artifact-list .ds-artifact-item.clearfix.odd .thumbnail-wrapper')))
+    array_docs2 = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.ds-static-div.primary .ds-artifact-list .ds-artifact-item.clearfix.even .thumbnail-wrapper')))
 
-@red.post('/test', response_model= list[str], tags=["Web Scrapping"])
-def postText():
-    OpenWebSite()
+    for doc in array_docs:
+        doc.click()
+        wait.until(EC.visibility_of_element_located((By.TAG_NAME, "img"))).click()
+        wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
+        pdf_url = driver.current_url
+        response = requests.get(pdf_url)
+        with open(f"documents/IPNdocumento{search}.pdf", "wb") as f:
+            f.write(response.content)
+        driver.back()
+        wait.until(EC.visibility_of_element_located((By.CLASS_NAME, 'file-link')))
+        driver.back()
+        break
+    driver.quit()
+
+@red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
+def postText(search: str):
+    # SearchUNAM(search)
+    SearchIPN(search)
