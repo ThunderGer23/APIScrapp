@@ -78,20 +78,36 @@ def SearchIPN(search):
 
 def SearchTEC(search):
     driver = webdriver.Chrome()
-    wait = WebDriverWait(driver, 200)
+    wait = WebDriverWait(driver, 2000)
     driver.get(websites[2])
     search_box = wait.until(EC.visibility_of_element_located((By.ID, "aspect_discovery_SimpleSearch_field_query")))
     search_box.click()
     search_box.send_keys(search)
     search_box.send_keys(Keys.RETURN)
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.container .row.row-offcanvas.row-offcanvas-right .horizontal-slider.clearfix .col-xs-12.col-sm-12.col-md-9.main-content .ds-static-div.primary .ds-static-div.primary .row.ds-artifact-item .col-sm-3.hidden-xs .thumbnail.artifact-preview')))
+
     cont = 0
     for doc in array_docs:
-        if (cont == 0): pass
-        else: cont += 1
         doc.click()
-    
-    print('Lo tengo' if (array_docs) else 'onta esa madre? 👀👀👀')
+        link = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe"))).get_attribute('src')
+        evaluate = link[:30]
+        if( 'repositorio.tec' in evaluate):
+            driver.quit()
+            prefs = {'download.default_directory': 'D:\Tesis\APIScrapp\documents'}
+            chrome_options = webdriver.ChromeOptions()
+            chrome_options.add_experimental_option('prefs', prefs)
+            driver = webdriver.Chrome(options=chrome_options)
+            wait = WebDriverWait(driver, 20000)
+            driver.get(link)
+            search_box = wait.until(EC.visibility_of_element_located((By.ID, "download")))
+            search_box.click()
+            time.sleep(5)
+            driver.quit()
+            cont +=1
+            driver.back()
+        else:
+            driver.back()
+        if (cont == 5): break
     # driver.quit()
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
