@@ -85,8 +85,10 @@ def SearchTEC(search):
     search_box.send_keys(search)
     search_box.send_keys(Keys.RETURN)
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.container .row.row-offcanvas.row-offcanvas-right .horizontal-slider.clearfix .col-xs-12.col-sm-12.col-md-9.main-content .ds-static-div.primary .ds-static-div.primary .row.ds-artifact-item .col-sm-3.hidden-xs .thumbnail.artifact-preview')))
-
+    cont = 0
     for doc in array_docs:
+        if (cont == 0): pass
+        else: cont += 1
         doc.click()
     
     print('Lo tengo' if (array_docs) else 'onta esa madre? 👀👀👀')
