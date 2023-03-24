@@ -65,7 +65,6 @@ def SearchIPN(search):
     search_box.send_keys(search)
     search_box.send_keys(Keys.RETURN)
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.ds-static-div.primary .ds-artifact-list .ds-artifact-item.clearfix.odd .thumbnail-wrapper')))
-    array_docs2 = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.ds-static-div.primary .ds-artifact-list .ds-artifact-item.clearfix.even .thumbnail-wrapper')))
 
     for doc in array_docs:
         doc.click()
@@ -75,13 +74,26 @@ def SearchIPN(search):
         response = requests.get(pdf_url)
         with open(f"documents/IPNdocumento{search}.pdf", "wb") as f:
             f.write(response.content)
-        driver.back()
-        wait.until(EC.visibility_of_element_located((By.CLASS_NAME, 'file-link')))
-        driver.back()
-        break
-    driver.quit()
+        driver.quit()
+
+def SearchTEC(search):
+    driver = webdriver.Chrome()
+    wait = WebDriverWait(driver, 200)
+    driver.get(websites[2])
+    search_box = wait.until(EC.visibility_of_element_located((By.ID, "aspect_discovery_SimpleSearch_field_query")))
+    search_box.click()
+    search_box.send_keys(search)
+    search_box.send_keys(Keys.RETURN)
+    array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.container .row.row-offcanvas.row-offcanvas-right .horizontal-slider.clearfix .col-xs-12.col-sm-12.col-md-9.main-content .ds-static-div.primary .ds-static-div.primary .row.ds-artifact-item .col-sm-3.hidden-xs .thumbnail.artifact-preview')))
+
+    for doc in array_docs:
+        doc.click()
+    
+    print('Lo tengo' if (array_docs) else 'onta esa madre? 👀👀👀')
+    # driver.quit()
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
     # SearchUNAM(search)
-    SearchIPN(search)
+    # SearchIPN(search)
+    SearchTEC(search)
