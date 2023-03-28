@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from os import environ as env
+from os import path as pth
 from notigram import ping
 from fastapi.responses import HTMLResponse, FileResponse
 from selenium.webdriver.chrome.service import Service
@@ -8,8 +9,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import requests
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -65,16 +64,14 @@ def SearchIPN(search):
     search_box.send_keys(search)
     search_box.send_keys(Keys.RETURN)
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.ds-static-div.primary .ds-artifact-list .ds-artifact-item.clearfix.odd .thumbnail-wrapper')))
-
-    for doc in array_docs:
-        doc.click()
-        wait.until(EC.visibility_of_element_located((By.TAG_NAME, "img"))).click()
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
-        pdf_url = driver.current_url
-        response = requests.get(pdf_url)
-        with open(f"documents/IPNdocumento{search}.pdf", "wb") as f:
-            f.write(response.content)
-        driver.quit()
+    array_docs[0].click()
+    wait.until(EC.visibility_of_element_located((By.TAG_NAME, "img"))).click()
+    wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
+    pdf_url = driver.current_url
+    response = requests.get(pdf_url)
+    with open(f"documents/IPNdocumento{search}.pdf", "wb") as f:
+        f.write(response.content)
+    driver.quit()
 
 def SearchTEC(search):
     driver = webdriver.Chrome()
@@ -87,31 +84,69 @@ def SearchTEC(search):
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.container .row.row-offcanvas.row-offcanvas-right .horizontal-slider.clearfix .col-xs-12.col-sm-12.col-md-9.main-content .ds-static-div.primary .ds-static-div.primary .row.ds-artifact-item .col-sm-3.hidden-xs .thumbnail.artifact-preview')))
 
     cont = 0
+    listdocuments = []
     for doc in array_docs:
         doc.click()
         link = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe"))).get_attribute('src')
         evaluate = link[:30]
         if( 'repositorio.tec' in evaluate):
-            driver.quit()
-            prefs = {'download.default_directory': 'D:\Tesis\APIScrapp\documents'}
-            chrome_options = webdriver.ChromeOptions()
-            chrome_options.add_experimental_option('prefs', prefs)
-            driver = webdriver.Chrome(options=chrome_options)
-            wait = WebDriverWait(driver, 20000)
-            driver.get(link)
-            search_box = wait.until(EC.visibility_of_element_located((By.ID, "download")))
-            search_box.click()
-            time.sleep(5)
-            driver.quit()
+            listdocuments.append(link)
             cont +=1
-            driver.back()
-        else:
-            driver.back()
+        driver.back()
         if (cont == 5): break
-    # driver.quit()
+    driver.quit()
+
+    for i in listdocuments:
+        prefs = {'download.default_directory': 'D:\Tesis\APIScrapp\documents'}
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_experimental_option('prefs', prefs)
+        driver = webdriver.Chrome(options=chrome_options)
+        wait = WebDriverWait(driver, 2000)
+        driver.get(i)
+        search_box = wait.until(EC.visibility_of_element_located((By.ID, "download")))
+        search_box.click()
+        time.sleep(5)
+    driver.quit()
+
+def SearchUAM(search):
+    driver = webdriver.Chrome()
+    wait = WebDriverWait(driver, 2000)
+    driver.get(websites[3])
+    search_box = wait.until(EC.visibility_of_element_located((By.ID, "aspect_discovery_SimpleSearch_field_query")))
+    search_box.click()
+    search_box.send_keys(search)
+    search_box.send_keys(Keys.RETURN)
+    array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.container .row.row-offcanvas.row-offcanvas-right .horizontal-slider.clearfix .col-xs-12.col-sm-12.col-md-9.main-content .ds-static-div.primary .ds-static-div.primary .row.ds-artifact-item .col-sm-3.hidden-xs .thumbnail.artifact-preview')))
+
+    cont = 0
+    listdocuments = []
+    for doc in array_docs:
+        doc.click()
+        link = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe"))).get_attribute('src')
+        evaluate = link[:30]
+        print(link)
+        if( 'http://zaloamati.azc.uam.mx/th' in evaluate):
+            listdocuments.append(link)
+            cont +=1
+        driver.back()
+        if (cont == 5): break
+    driver.quit()
+
+    for i in listdocuments:
+        prefs = {'download.default_directory': 'D:\Tesis\APIScrapp\documents'}
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_experimental_option('prefs', prefs)
+        driver = webdriver.Chrome(options=chrome_options)
+        wait = WebDriverWait(driver, 2000)
+        driver.get(i)
+        search_box = wait.until(EC.visibility_of_element_located((By.ID, "download")))
+        search_box.click()
+        time.sleep(5)
+    driver.quit()
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
-    # SearchUNAM(search)
-    # SearchIPN(search)
+    SearchUNAM(search)
+    SearchIPN(search)
+    SearchUAM(search)
     SearchTEC(search)
