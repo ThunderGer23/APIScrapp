@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from os import environ as env
+from os import listdir as ld
 from os import path as pth
 from notigram import ping
 from fastapi.responses import HTMLResponse, FileResponse
@@ -19,6 +19,7 @@ websites = [
     'https://repositorio.tec.mx/discover',
     'http://zaloamati.azc.uam.mx/handle/11191/6701/discover'
 ]
+prefs = {'download.default_directory': 'D:\Tesis\APIScrapp\documents'}
 red = APIRouter()
 
 def SearchUNAM(search):
@@ -56,7 +57,7 @@ def SearchUNAM(search):
     driver.quit()
 
 def SearchIPN(search):
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(options=webdriver.ChromeOptions().add_experimental_option('prefs', prefs))
     wait = WebDriverWait(driver, 200)
     driver.get(websites[1])
     search_box = wait.until(EC.visibility_of_element_located((By.ID, "aspect_discovery_CommunitySearch_field_query")))
@@ -65,12 +66,19 @@ def SearchIPN(search):
     search_box.send_keys(Keys.RETURN)
     array_docs = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '.ds-static-div.primary .ds-artifact-list .ds-artifact-item.clearfix.odd .thumbnail-wrapper')))
     array_docs[0].click()
+    before = driver.current_url
     wait.until(EC.visibility_of_element_located((By.TAG_NAME, "img"))).click()
-    wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
-    pdf_url = driver.current_url
-    response = requests.get(pdf_url)
-    with open(f"documents/IPNdocumento{search}.pdf", "wb") as f:
-        f.write(response.content)
+    after = driver.current_url
+    if(before != after):
+        wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
+        pdf_url = driver.current_url
+        response = requests.get(pdf_url)
+        with open(f"documents/IPNdocumento{search}.pdf", "wb") as f:
+            f.write(response.content)
+            while pth.exists('D:\Tesis\APIScrapp\documents\IPNdocumento{search}.pdf'):
+                driver.quit()
+    else:
+        time.sleep(20)
     driver.quit()
 
 def SearchTEC(search):
@@ -97,7 +105,6 @@ def SearchTEC(search):
     driver.quit()
 
     for i in listdocuments:
-        prefs = {'download.default_directory': 'D:\Tesis\APIScrapp\documents'}
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_experimental_option('prefs', prefs)
         driver = webdriver.Chrome(options=chrome_options)
@@ -105,7 +112,7 @@ def SearchTEC(search):
         driver.get(i)
         search_box = wait.until(EC.visibility_of_element_located((By.ID, "download")))
         search_box.click()
-        time.sleep(5)
+        time.sleep(7)
     driver.quit()
 
 def SearchUAM(search):
@@ -143,6 +150,10 @@ def SearchUAM(search):
         search_box.click()
         time.sleep(5)
     driver.quit()
+
+def sendfiles():
+    # Here you have to send all the theses of blow to the cutfile and answer an ok to the front
+    print('hi')
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
