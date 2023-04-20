@@ -151,13 +151,19 @@ def SearchUAM(search):
         time.sleep(5)
     driver.quit()
 
-def sendfiles():
-    # Here you have to send all the theses of blow to the cutfile and answer an ok to the front
-    print('hi')
+async def sendfiles():
+    URL = 'http://www.apicuttex-production.up.railway.app/document'
+    files = {}
+    lista = ld('./documents')
+    for i in range(len(lista)):
+        files = await {'file': open(lista[i], 'rb')}
+    response = requests.post(URL, files=files)
+    print(response)
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
-    SearchUNAM(search)
-    SearchIPN(search)
-    SearchUAM(search)
-    SearchTEC(search)
+    # SearchUNAM(search)
+    # SearchIPN(search)
+    # SearchUAM(search)
+    # SearchTEC(search)
+    sendfiles()
