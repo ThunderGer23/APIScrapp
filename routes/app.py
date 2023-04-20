@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from os import listdir as ld
+import ssl
 from os import path as pth
 from config.db import conn
 from notigram import ping
@@ -10,6 +11,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from bson import json_util
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -152,19 +154,27 @@ def SearchUAM(search):
         time.sleep(5)
     driver.quit()
 
-async def sendfiles():
-    URL = 'http://www.apicuttex-production.up.railway.app/document'
-    lista = ld('./documents')
-    ids = []
-    # for i in range(len(lista)):
-    #     ids.append(conn.local.files.insert_one(file ={
-    #         "name": lista[i].filename,
-    #         "data": await lista[i].read()
-    #     }).inserted_id)
-    ids = [conn.local.files.insert_one(file={"name": item.filename, "data": await item.read()}).inserted_id for item in lista]
-    response = requests.post(URL, files=ids)
-    return(response)
-
+def sendfiles():
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    try:
+        lista = ld('./documents')
+        ids = []
+        for i in range(len(lista)):
+            with open(f'./documents/{lista[i]}', 'rb') as f:
+                ids.append(str(conn.local.files.insert_one({
+                    "name": lista[i],
+                    "data": f.read()
+                }).inserted_id))
+        ids_str = ','.join(str(id_) for id_ in ids)
+        URL = 'http://www.apicuttex-production.up.railway.app/document'
+        serialized_ids = json_util.dumps(ids)
+        print(serialized_ids)
+        requests.post(URL, json={'ids': serialized_ids}, verify=ssl_context)
+        return 'ok'
+    except Exception as e:
+        raise
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
@@ -173,3 +183,4 @@ def postText(search: str):
     # SearchUAM(search)
     # SearchTEC(search)
     sendfiles()
+    return 'ok'
