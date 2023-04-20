@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from os import listdir as ld
 from os import path as pth
+from config.db import conn
 from notigram import ping
 from fastapi.responses import HTMLResponse, FileResponse
 from selenium.webdriver.chrome.service import Service
@@ -153,12 +154,17 @@ def SearchUAM(search):
 
 async def sendfiles():
     URL = 'http://www.apicuttex-production.up.railway.app/document'
-    files = {}
     lista = ld('./documents')
-    for i in range(len(lista)):
-        files = await {'file': open(lista[i], 'rb')}
-    response = requests.post(URL, files=files)
-    print(response)
+    ids = []
+    # for i in range(len(lista)):
+    #     ids.append(conn.local.files.insert_one(file ={
+    #         "name": lista[i].filename,
+    #         "data": await lista[i].read()
+    #     }).inserted_id)
+    ids = [conn.local.files.insert_one(file={"name": item.filename, "data": await item.read()}).inserted_id for item in lista]
+    response = requests.post(URL, files=ids)
+    return(response)
+
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
