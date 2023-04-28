@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from os import listdir as ld
-import ssl
 from os import path as pth
+from os import remove as rm
 from config.db import conn
 from notigram import ping
 from fastapi.responses import HTMLResponse, FileResponse
@@ -15,6 +15,10 @@ from bson import json_util
 import time
 import requests
 from bs4 import BeautifulSoup
+from urllib3.exceptions import InsecureRequestWarning
+# Deshabilita la advertencia de solicitud no verificada
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
 
 websites = [
     'https://repositorio.unam.mx/contenidos?f=883.%23.%23.a_lit:Repositorio%20de%20la%20Direcci%C3%B3n%20General%20de%20Bibliotecas%20y%20Servicios%20Digitales%20de%20Informaci%C3%B3n',
@@ -155,32 +159,29 @@ def SearchUAM(search):
     driver.quit()
 
 def sendfiles():
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    try:
-        lista = ld('./documents')
-        ids = []
-        for i in range(len(lista)):
-            with open(f'./documents/{lista[i]}', 'rb') as f:
-                ids.append(str(conn.local.files.insert_one({
-                    "name": lista[i],
-                    "data": f.read()
-                }).inserted_id))
-        ids_str = ','.join(str(id_) for id_ in ids)
-        URL = 'http://www.apicuttex-production.up.railway.app/document'
-        serialized_ids = json_util.dumps(ids)
-        print(serialized_ids)
-        requests.post(URL, json={'ids': serialized_ids}, verify=ssl_context)
-        return 'ok'
-    except Exception as e:
-        raise
+    lista = ld('./documents')
+    ids = []
+    for i in range(len(lista)):
+        with open(f'./documents/{lista[i]}', 'rb') as f:
+            test = conn.local.files.insert_one({"name": lista[i],"data": f.read()}).inserted_id
+            ids.append(str(test))
+    value = {"id": ids}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    # response = requests.post('http://www.recive-production.up.railway.app/probando', headers=headers, json=value, verify=False)
+    response = requests.post('https://apicuttex-production.up.railway.app/document', headers=headers, json=value, verify=False)
+    print(response.text)
+    for file_name in lista:
+        [rm(pth.join("documents", file)) for file in ld("documents")]
+    return 'ok'
 
 @red.post('/test/${search}', response_model= list[str], tags=["Web Scrapping"])
 def postText(search: str):
-    # SearchUNAM(search)
-    # SearchIPN(search)
-    # SearchUAM(search)
-    # SearchTEC(search)
+    SearchUNAM(search)
+    SearchIPN(search)
+    SearchUAM(search)
+    SearchTEC(search)
     sendfiles()
     return 'ok'
